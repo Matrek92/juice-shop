@@ -9,13 +9,23 @@ export function login () {
         security.authenticatedUsers.put(token, user)
         res.json({ authentication: { token, bid: basket.id, umail: user.data.email } })
       }).catch((error: Error) => {
-        next(error)
+        next(error) 
       })
   }
 
-  return (req: Request, res: Response, next: NextFunction) => {
-    models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${security.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: models.User, plain: false })
-      .then((authenticatedUser) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+    const email = req.body.email || '';
+    const passwordHash = security.hash(req.body.password || '');
+
+    models.sequelize.query(
+      `SELECT * FROM Users WHERE email = :email AND password = :password AND deletedAt IS NULL`,
+      {
+        replacements: { email, password: passwordHash },
+        model: models.User,
+        plain: false
+      }
+    )
+   .then((authenticatedUser) => {
         const user = utils.queryResultToJson(authenticatedUser)
         if (user.data?.id && user.data.totpSecret !== '') {
           res.status(401).json({
